@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "ios": "cpp",
+        "dense": "cpp",
+        "stdexcept": "cpp",
+        "vector": "cpp"
+    }
+}
