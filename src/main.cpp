@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <stdexcept>
+#include <cmath>
 #include <Eigen/Dense>
 using namespace std;
 
@@ -72,44 +73,176 @@ VectorInt loadMnistLabels(const string& filePath) {
     return labels;
 }
 
+// Convert label vector to one-hot encoded matrix (numSamples x numClasses)
+MatrixFloat oneHotEncode(const VectorInt& labels, int numClasses) {
+    MatrixFloat oneHot = MatrixFloat::Zero(labels.size(), numClasses);
+    for (int i = 0; i < labels.size(); i++) {
+        oneHot(i, labels(i)) = 1.0f;
+    }
+    return oneHot;
+}
+
+// Softmax function: converts logits to probabilities
+// Applied row-wise: each row is a sample, each column is a class
+MatrixFloat softmax(const MatrixFloat& logits) {
+    MatrixFloat probabilities(logits.rows(), logits.cols());
+    
+    for (int i = 0; i < logits.rows(); i++) {
+        // Subtract max for numerical stability
+        float maxLogit = logits.row(i).maxCoeff();
+        Eigen::VectorXf expValues = (logits.row(i).array() - maxLogit).exp();
+        float sumExp = expValues.sum();
+        probabilities.row(i) = expValues / sumExp;
+    }
+    
+    return probabilities;
+}
+
+// Compute cross-entropy loss
+float crossEntropyLoss(const MatrixFloat& predictions, const MatrixFloat& targets) {
+    // Add small epsilon to avoid log(0)
+    const float epsilon = 1e-10f;
+    MatrixFloat clippedPredictions = predictions.array().max(epsilon);
+    
+    // Cross-entropy: -sum(y_true * log(y_pred)) / numSamples
+    float loss = -(targets.array() * clippedPredictions.array().log()).sum() / predictions.rows();
+    return loss;
+}
+
+// Compute accuracy
+float computeAccuracy(const MatrixFloat& predictions, const VectorInt& trueLabels) {
+    int correct = 0;
+    for (int i = 0; i < predictions.rows(); i++) {
+        int predictedClass;
+        predictions.row(i).maxCoeff(&predictedClass);
+        if (predictedClass == trueLabels(i)) {
+            correct++;
+        }
+    }
+    return static_cast<float>(correct) / predictions.rows();
+}
+
+// Softmax regression model
+class SoftmaxRegression {
+public:
+    MatrixFloat weights;  // numFeatures x numClasses
+    Eigen::VectorXf bias; // numClasses
+    
+    SoftmaxRegression(int numFeatures, int numClasses) {
+        // Initialize weights with small random values
+        weights = MatrixFloat::Random(numFeatures, numClasses) * 0.01f;
+        bias = Eigen::VectorXf::Zero(numClasses);
+    }
+    
+    // Forward pass: compute predictions
+    MatrixFloat predict(const MatrixFloat& images) {
+        // logits = X * W + b
+        MatrixFloat logits = images * weights;
+        logits.rowwise() += bias.transpose();
+        return softmax(logits);
+    }
+    
+    // Train the model using gradient descent
+    void train(const MatrixFloat& trainImages, const MatrixFloat& trainLabelsOneHot,
+               int numEpochs, float learningRate, int batchSize = 100) {
+        int numSamples = trainImages.rows();
+        int numBatches = (numSamples + batchSize - 1) / batchSize;
+        
+        cout << "Training softmax regression...\n";
+        cout << "Epochs: " << numEpochs << ", Learning rate: " << learningRate << ", Batch size: " << batchSize << "\n\n";
+        
+        for (int epoch = 0; epoch < numEpochs; epoch++) {
+            float totalLoss = 0.0f;
+            
+            for (int batch = 0; batch < numBatches; batch++) {
+                int startIdx = batch * batchSize;
+                int endIdx = min(startIdx + batchSize, numSamples);
+                int currentBatchSize = endIdx - startIdx;
+                
+                // Get batch
+                MatrixFloat batchImages = trainImages.middleRows(startIdx, currentBatchSize);
+                MatrixFloat batchLabels = trainLabelsOneHot.middleRows(startIdx, currentBatchSize);
+                
+                // Forward pass
+                MatrixFloat predictions = predict(batchImages);
+                
+                // Compute loss
+                float loss = crossEntropyLoss(predictions, batchLabels);
+                totalLoss += loss * currentBatchSize;
+                
+                // Backward pass: compute gradients
+                // Gradient of cross-entropy + softmax: predictions - targets
+                MatrixFloat gradientLogits = (predictions - batchLabels) / currentBatchSize;
+                
+                // Gradient for weights: X^T * gradientLogits
+                MatrixFloat gradientWeights = batchImages.transpose() * gradientLogits;
+                
+                // Gradient for bias: sum over samples
+                Eigen::VectorXf gradientBias = gradientLogits.colwise().sum();
+                
+                // Update parameters
+                weights -= learningRate * gradientWeights;
+                bias -= learningRate * gradientBias;
+            }
+            
+            // Report progress every few epochs
+            if ((epoch + 1) % 10 == 0 || epoch == 0) {
+                float avgLoss = totalLoss / numSamples;
+                MatrixFloat trainPredictions = predict(trainImages);
+                float trainAccuracy = computeAccuracy(trainPredictions, 
+                    Eigen::Map<const VectorInt>(reinterpret_cast<const int*>(trainLabelsOneHot.data()), 
+                                                 trainLabelsOneHot.rows()));
+                
+                // Get actual labels from one-hot encoding for accuracy calculation
+                VectorInt actualLabels(trainLabelsOneHot.rows());
+                for (int i = 0; i < trainLabelsOneHot.rows(); i++) {
+                    trainLabelsOneHot.row(i).maxCoeff(&actualLabels(i));
+                }
+                trainAccuracy = computeAccuracy(trainPredictions, actualLabels);
+                
+                cout << "Epoch " << (epoch + 1) << "/" << numEpochs 
+                     << " - Loss: " << avgLoss 
+                     << " - Accuracy: " << (trainAccuracy * 100) << "%\n";
+            }
+        }
+        cout << "\nTraining complete!\n\n";
+    }
+};
+
 int main() {
     try {
         // Load training data
-        MatrixFloat trainingImages = loadMnistImages("data/train-images.idx3-ubyte");
-        VectorInt trainingLabels   = loadMnistLabels("data/train-labels.idx1-ubyte");
+        cout << "Loading MNIST dataset...\n";
+        MatrixFloat trainImages = loadMnistImages("data/train-images.idx3-ubyte");
+        VectorInt trainLabels   = loadMnistLabels("data/train-labels.idx1-ubyte");
+        cout << "Loaded " << trainImages.rows() << " training images\n";
+        
+        // Load test data
+        MatrixFloat testImages = loadMnistImages("data/t10k-images.idx3-ubyte");
+        VectorInt testLabels   = loadMnistLabels("data/t10k-labels.idx1-ubyte");
+        cout << "Loaded " << testImages.rows() << " test images\n\n";
 
-        cout << "Loaded " << trainingImages.rows() << " training images, each with " << trainingImages.cols() << " pixels (flattened 28x28).\n";
-        cout << "Loaded " << trainingLabels.size() << " training labels.\n\n";
-
-        // Display the first 10 labels
-        cout << "First 10 training labels: ";
-        for (int i = 0; i < 10; i++) {
-            cout << trainingLabels(i) << " ";
-        }
-        cout << "\n";
-
-        // Display value range for the first image
-        float minPixelValue = trainingImages.row(0).minCoeff();
-        float maxPixelValue = trainingImages.row(0).maxCoeff();
-        cout << "First image pixel range: [" << minPixelValue << ", "
-                  << maxPixelValue << "]\n\n";
-
-        // ASCII visualization of the first image
-        cout << "ASCII visualization of the first image:\n";
-
-            for (int row = 0; row < 28; row++) {
-
-                for (int col = 0; col < 28; col++) {
-                    float pixelValue = trainingImages(0, row * 28 + col);
-
-                    int rampIndex = static_cast<int>(pixelValue * 9 + 0.5f);
-                    rampIndex = min(9, max(0, rampIndex));
-                    const char *intensityRamp = " .:-=+*#%@";
-                    cout << intensityRamp[rampIndex];
-                }
-
-                cout << "\n";
-            }
+        // One-hot encode labels
+        const int numClasses = 10;
+        MatrixFloat trainLabelsOneHot = oneHotEncode(trainLabels, numClasses);
+        
+        // Create and train model
+        int numFeatures = trainImages.cols(); // 784 (28x28 pixels)
+        SoftmaxRegression model(numFeatures, numClasses);
+        
+        // Hyperparameters
+        int numEpochs = 1;
+        int batchSize = 128;
+        float learningRate = 0.1f;
+        
+        model.train(trainImages, trainLabelsOneHot, numEpochs, learningRate, batchSize);
+        
+        // Evaluate on test set
+        cout << "Evaluating on test set...\n";
+        MatrixFloat testPredictions = model.predict(testImages);
+        float testAccuracy = computeAccuracy(testPredictions, testLabels);
+        
+        cout << "Test Accuracy: " << (testAccuracy * 100) << "%\n";
 
     } catch (const exception& error) {
         cerr << "Error: " << error.what() << "\n";
