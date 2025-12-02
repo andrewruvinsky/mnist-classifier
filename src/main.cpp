@@ -105,10 +105,11 @@ int main() {
         int numFeatures = trainImages.cols(); // 784 (28x28 pixels)
         SoftmaxRegression model(numFeatures, numClasses);
         
-        // Hyperparameters
-        int numEpochs = 10;
-        int batchSize = 128;
-        float learningRate = 0.1f;
+        /***** Hyperparameters *****/ 
+        int numEpochs = 10; // # full passes through the training set
+        int batchSize = 128; // Determines # samples to process before updating weights
+        float learningRate = 0.1f; // When updating gradients, how "big" of a step to take
+        /***************************/ 
         
         model.train(trainImages, trainLabelsOneHot, numEpochs, learningRate, batchSize);
         

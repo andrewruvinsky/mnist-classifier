@@ -38,22 +38,32 @@ void SoftmaxRegression::train(const MatrixFloat &trainImages, const MatrixFloat 
         auto epochStartTime = chrono::high_resolution_clock::now();
         float totalLoss = 0.0f;
 
-        for (int batch = 0; batch < numBatches; batch++)
-        {
+        for (int batch = 0; batch < numBatches; batch++) {
+            // Grabs the first batchSize samples, then the next
+            // batchSize on the next iterations, and so on.
             int startIdx = batch * batchSize;
             int endIdx = min(startIdx + batchSize, numSamples);
             int currentBatchSize = endIdx - startIdx;
 
             // Get batch
             MatrixFloat batchImages = trainImages.middleRows(startIdx, currentBatchSize);
+            // Once-hot encod labels for the batch
             MatrixFloat batchLabels = trainLabelsOneHot.middleRows(startIdx, currentBatchSize);
 
             // Forward pass
+            // Make predictions based on current weights and bias
             MatrixFloat predictions = predict(batchImages);
 
-            // Compute loss
+            // Compute average loss for this batch: "How far off was I this time?"
             float loss = crossEntropyLoss(predictions, batchLabels);
+            // totalLoss measures loss for each epoch. Need to multiply
+            // average loss by currentBatchSize to scale it up from per-batch
+            // average to eventually get total loss for epoch.
             totalLoss += loss * currentBatchSize;
+            // Additional notes: Each batch gives us the average loss,
+            // but we need the true average across the entire epoch. To do
+            // this, we accumulate the average loss scaled by the number of
+            // samples over each batch in the epoch.
 
             // Backward pass: compute gradients
             // Gradient of cross-entropy + softmax: predictions - targets
@@ -70,6 +80,7 @@ void SoftmaxRegression::train(const MatrixFloat &trainImages, const MatrixFloat 
             bias -= learningRate * gradientBias;
         }
 
+        // Timekeeping for reporting performance
         auto epochEndTime = chrono::high_resolution_clock::now();
         chrono::duration<double> epochDuration = epochEndTime - epochStartTime;
         double epochTime = epochDuration.count();
@@ -85,6 +96,10 @@ void SoftmaxRegression::train(const MatrixFloat &trainImages, const MatrixFloat 
         for (int i = 0; i < trainLabelsOneHot.rows(); i++) {
             trainLabelsOneHot.row(i).maxCoeff(&actualLabels(i));
         }
+        
+        // TODO: Set aside 20% of training data for validation accuracy
+        // to avoid reporting training accuracy here (which can 
+        // inaccurately represent the model's accuracy).
         trainAccuracy = computeAccuracy(trainPredictions, actualLabels);
 
         cout << "Epoch " << (epoch + 1) << "/" << numEpochs
@@ -102,7 +117,6 @@ void SoftmaxRegression::train(const MatrixFloat &trainImages, const MatrixFloat 
     cout << "Total training time: " << fixed << setprecision(1) << totalTrainingTime << "s | ";
     cout << "Avg. time per epoch: " << fixed << setprecision(1) << avgEpochTime << "s\n\n";
 }
-
 
 // Softmax function: converts logits to probabilities
 // Applied row-wise: each row is a sample, each column is a class
