@@ -1,3 +1,5 @@
+// src/SoftmaxRegression.h
+
 #ifndef SOFTMAX_REGRESSION_H
 #define SOFTMAX_REGRESSION_H
 #include <Eigen/Dense>

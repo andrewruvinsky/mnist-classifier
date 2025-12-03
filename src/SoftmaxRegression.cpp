@@ -1,3 +1,5 @@
+// src/SoftmaxRegression.cpp
+
 #include <iostream>
 #include <Eigen/Dense>
 #include <chrono>
@@ -17,7 +19,7 @@ SoftmaxRegression::SoftmaxRegression(int numFeatures, int numClasses) {
 
 // Forward pass: compute predictions
 MatrixFloat SoftmaxRegression::predict(const MatrixFloat &images) {
-    // z = x * W + b
+    // z = X * W + b
     MatrixFloat logits = images * weights;
     logits.rowwise() += bias.transpose();
     return softmax(logits);
@@ -47,35 +49,45 @@ void SoftmaxRegression::train(const MatrixFloat &trainImages, const MatrixFloat 
 
             // Get batch
             MatrixFloat batchImages = trainImages.middleRows(startIdx, currentBatchSize);
-            // Once-hot encod labels for the batch
+            // One-hot encod labels for the batch
             MatrixFloat batchLabels = trainLabelsOneHot.middleRows(startIdx, currentBatchSize);
 
-            // Forward pass
+            /***** FORWARD PASS *****/ 
             // Make predictions based on current weights and bias
             MatrixFloat predictions = predict(batchImages);
 
-            // Compute average loss for this batch: "How far off was I this time?"
+            // Compute average loss for this batch
+            // "How far off was I this time?"
             float loss = crossEntropyLoss(predictions, batchLabels);
+
             // totalLoss measures loss for each epoch. Need to multiply
             // average loss by currentBatchSize to scale it up from per-batch
             // average to eventually get total loss for epoch.
             totalLoss += loss * currentBatchSize;
-            // Additional notes: Each batch gives us the average loss,
-            // but we need the true average across the entire epoch. To do
-            // this, we accumulate the average loss scaled by the number of
-            // samples over each batch in the epoch.
+            // Additional notes: Each batch gives us the average loss per-batch,
+            // but we need the average across per-epoch. To do this, we
+            // accumulate the average loss scaled by the number of samples over
+            // each batch in the epoch.
 
-            // Backward pass: compute gradients
+            /***** BACKWARD PASS: Compute gradients *****/ 
             // Gradient of cross-entropy + softmax: predictions - targets
+            // Gets mean gradient for the batch
+            // The gradient logits are needed to update the weights and bias on the next step
             MatrixFloat gradientLogits = (predictions - batchLabels) / currentBatchSize;
 
+            // Here's the equation for calculating logits: z = XW + b.
+            // Take the derivative wrt W to know how to update W (weights).
             // Gradient for weights: X^T * gradientLogits
+            // “How much does changing pixel i affect class j’s error?”
             MatrixFloat gradientWeights = batchImages.transpose() * gradientLogits;
 
             // Gradient for bias: sum over samples
+            // "For each column (class), sum all values in that column"
             Eigen::VectorXf gradientBias = gradientLogits.colwise().sum();
 
-            // Update parameters
+            //***** UPDATE PARAMETERS *****/
+            // The goal is to minimize loss
+            // SUBTRACTING moves us in the direction of LOWER loss
             weights -= learningRate * gradientWeights;
             bias -= learningRate * gradientBias;
         }

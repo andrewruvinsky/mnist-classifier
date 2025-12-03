@@ -1,3 +1,6 @@
+// Author: Andrew Ruvinsky
+// src/main.cpp
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -53,14 +56,13 @@ MatrixFloat loadMnistImages(const string& filePath) {
 // Load MNIST label file into an Eigen vector (numLabels)
 VectorInt loadMnistLabels(const string& filePath) {
     ifstream fileStream(filePath, ios::binary);
-    if (!fileStream)
-        throw runtime_error("Could not open file: " + filePath);
+    
+    if (!fileStream) throw runtime_error("Could not open file: " + filePath);
 
     uint32_t magicNumber = readBigEndianUInt32(fileStream);
     uint32_t numLabels   = readBigEndianUInt32(fileStream);
 
-    if (magicNumber != 2049)
-        throw runtime_error("Invalid MNIST label file magic number in: " + filePath);
+    if (magicNumber != 2049) throw runtime_error("Invalid MNIST label file magic number in: " + filePath);
 
     VectorInt labels(numLabels);
 
@@ -97,8 +99,9 @@ int main() {
         VectorInt testLabels   = loadMnistLabels("data/t10k-labels.idx1-ubyte");
         cout << "Loaded " << testImages.rows() << " test images\n\n";
 
-        // One-hot encode labels
+        // Number of output classes for [0-9] digits
         const int numClasses = 10;
+        // One-hot encode labels for training
         MatrixFloat trainLabelsOneHot = oneHotEncode(trainLabels, numClasses);
         
         // Create and train model
