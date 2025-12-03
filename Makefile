@@ -1,5 +1,5 @@
 make:
-	clang++ -std=c++17 src/main.cpp -o build/model
+	g++ -std=c++17 src/*.cpp -o build/model
 
 clean:
 	rm build/model
