@@ -86,6 +86,7 @@ MatrixFloat oneHotEncode(const VectorInt &labels, int numClasses) {
     return oneHot;
 }
 
+// TODO: Implement one hidden layer to make this an ANN
 int main() {
     try {
         // Load training data
