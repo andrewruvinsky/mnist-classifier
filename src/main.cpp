@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <cmath>
 #include <Eigen/Dense>
-#include "SoftmaxRegression.h"
+#include "SimpleANN.h"
 using namespace std;
 
 using MatrixFloat = Eigen::MatrixXf;
@@ -103,17 +103,35 @@ int main() {
         const int numClasses = 10;
         // One-hot encode labels for training
         MatrixFloat trainLabelsOneHot = oneHotEncode(trainLabels, numClasses);
-        
-        // Create and train model
         int numFeatures = trainImages.cols(); // 784 (28x28 pixels)
-        SoftmaxRegression model(numFeatures, numClasses);
-        
+
         /***** Hyperparameters *****/ 
+        int numHiddenNeurons = 64; // Number of neurons in hidden layer
         int numEpochs = 10; // # full passes through the training set
         int batchSize = 128; // Determines # samples to process before updating weights
         float learningRate = 0.1f; // When updating gradients, how "big" of a step to take
-        /***************************/ 
-        
+        /***************************/
+
+        cout << "ASCII representation of data sample:\n";
+        string intensityLevels = " .:-=+*#%@";
+        for (int row = 0; row < 28; row++) {
+            for (int cols = 0; cols < 28; cols++) {
+                float pixelValue = trainImages(0, row * 28 + cols);
+                int levelIndex = static_cast<int>(pixelValue * (intensityLevels.size() - 1));
+                cout << intensityLevels[levelIndex];
+            }
+            cout << "\n";
+        }
+        cout << "\n";
+
+        // Create and train ANN model
+        SimpleANN model(numFeatures, numHiddenNeurons, numClasses);
+
+        cout << "Training ANN...\n";
+        cout << "# Hidden neurons: " << numHiddenNeurons
+        << ", Epochs: " << numEpochs 
+        << ", Batch size: " << batchSize 
+        << ", Learning rate: " << learningRate << "\n\n";
         model.train(trainImages, trainLabelsOneHot, numEpochs, learningRate, batchSize);
         
         // Evaluate on test set
