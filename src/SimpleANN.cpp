@@ -105,18 +105,18 @@ void SimpleANN::train(const MatrixFloat &trainImages, const MatrixFloat &trainLa
 
             // Get batch
             MatrixFloat batchImages = trainImages.middleRows(startIdx, currentBatchSize);
-            // One-hot encod labels for the batch
+            // One-hot encoded labels for the batch
             MatrixFloat batchLabels = trainLabelsOneHot.middleRows(startIdx, currentBatchSize);
 
             /***** FORWARD PASS: Make predictions based on current weights and bias *****/
-            // 1) Input -> Hidden
+            // 1. Input -> Hidden
             MatrixFloat hiddenPreActivation = (batchImages * weightsInputToHidden).rowwise() + biasHidden.transpose();
             MatrixFloat hiddenActivation = hiddenPreActivation.cwiseMax(0.0f);
 
-            // 2) Hidden -> Output
+            // 2. Hidden -> Output
             MatrixFloat logits = (hiddenActivation * weightsHiddenToOutput).rowwise() + biasOutput.transpose();
 
-            // 3) Apply softmax to get probabilities for each class
+            // 3. Apply softmax to get probabilities for each class
             MatrixFloat predictions = softmax(logits);
 
             float batchLoss = crossEntropyLoss(predictions, batchLabels);
