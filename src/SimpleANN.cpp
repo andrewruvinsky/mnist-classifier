@@ -173,8 +173,8 @@ void SimpleANN::train(const MatrixFloat &trainImages, const MatrixFloat &trainLa
         // inaccurately represent the model's accuracy).
 
         cout << "Epoch " << (epoch + 1) << "/" << numEpochs
-             << " | Loss: " << avgLoss
-             << " | Accuracy: " << (trainAccuracy * 100) << "%"
+             << " | Loss: " << fixed << setprecision(2) << avgLoss
+             << " | Accuracy: " << fixed << setprecision(2) << (trainAccuracy * 100) << "%"
              << " | Time: " << fixed << setprecision(1) << epochTime << "s\n";
     }
 
