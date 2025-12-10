@@ -11,6 +11,9 @@ using VectorInt = Eigen::VectorXi;
 MatrixFloat softmax(const MatrixFloat &logits);
 float crossEntropyLoss(const MatrixFloat &predictions, const MatrixFloat &targets);
 float computeAccuracy(const MatrixFloat &predictions, const VectorInt &trueLabels);
+Eigen::MatrixXi computeConfusionMatrix(const MatrixFloat &predictions, const VectorInt &trueLabels, int numClasses);
+void printConfusionMatrix(const Eigen::MatrixXi &confusionMatrix);
+void printPerformanceMetrics(const Eigen::MatrixXi &confusionMatrix);
 
 class SimpleANN {
 public:

@@ -51,6 +51,92 @@ float computeAccuracy(const MatrixFloat &predictions, const VectorInt &trueLabel
     return static_cast<float>(correct) / predictions.rows();
 }
 
+// Compute confusion matrix where:
+// rows = true labels, columns = predicted labels
+// confusionMatrix(i, j) = number of samples with true label i predicted as j
+Eigen::MatrixXi computeConfusionMatrix(const MatrixFloat &predictions, const VectorInt &trueLabels, int numClasses) {
+    Eigen::MatrixXi confusionMatrix = Eigen::MatrixXi::Zero(numClasses, numClasses);
+    
+    for (int i = 0; i < predictions.rows(); i++) {
+        int predictedClass;
+        predictions.row(i).maxCoeff(&predictedClass);
+        int trueClass = trueLabels(i);
+        confusionMatrix(trueClass, predictedClass)++;
+    }
+    
+    return confusionMatrix;
+}
+
+void printConfusionMatrix(const Eigen::MatrixXi &confusionMatrix) {
+    int numClasses = confusionMatrix.rows();
+    
+    cout << "\nConfusion Matrix:\n";
+    cout << "     ";
+    for (int i = 0; i < numClasses; i++) {
+        cout << setw(5) << i;
+    }
+    cout << "\n";
+    cout << "    " << string(numClasses * 5 + 1, '-') << "\n";
+    
+    for (int i = 0; i < numClasses; i++) {
+        cout << setw(3) << i << " |";
+        for (int j = 0; j < numClasses; j++) {
+            cout << setw(5) << confusionMatrix(i, j);
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+}
+
+void printPerformanceMetrics(const Eigen::MatrixXi &confusionMatrix) {
+    int numClasses = confusionMatrix.rows();
+    
+    cout << "Performance Metrics per Class:\n";
+    cout << "Class | Precision | Recall\n";
+    cout << "------|-----------|--------\n";
+    
+    float totalPrecision = 0.0f;
+    float totalRecall = 0.0f;
+    
+    for (int i = 0; i < numClasses; i++) {
+        // True Positives: correctly predicted as class i
+        int truePositives = confusionMatrix(i, i);
+        
+        // False Positives: incorrectly predicted as class i
+        int falsePositives = 0;
+        for (int j = 0; j < numClasses; j++) {
+            if (j != i) falsePositives += confusionMatrix(j, i);
+        }
+        
+        // False Negatives: true class i but predicted as something else
+        int falseNegatives = 0;
+        for (int j = 0; j < numClasses; j++) {
+            if (j != i) falseNegatives += confusionMatrix(i, j);
+        }
+        
+        // Precision: TP / (TP + FP)
+        float precision = (truePositives + falsePositives > 0) ? 
+            static_cast<float>(truePositives) / (truePositives + falsePositives) : 0.0f;
+        
+        // Recall: TP / (TP + FN)
+        float recall = (truePositives + falseNegatives > 0) ? 
+            static_cast<float>(truePositives) / (truePositives + falseNegatives) : 0.0f;
+        
+        cout << setw(5) << i << " | "
+             << setw(9) << fixed << setprecision(4) << precision << " | "
+             << setw(6) << fixed << setprecision(4) << recall << "\n";
+        
+        totalPrecision += precision;
+        totalRecall += recall;
+    }
+    
+    // Average precision and recall across all classes
+    cout << "------|-----------|--------\n";
+    cout << " Avg  | "
+         << setw(9) << fixed << setprecision(4) << (totalPrecision / numClasses) << " | "
+         << setw(6) << fixed << setprecision(4) << (totalRecall / numClasses) << "\n\n";
+}
+
 /*********** SimpleANN Member Functions ***********/
 
 SimpleANN::SimpleANN(int numFeatures, int numHiddenUnits, int numClasses)
@@ -108,7 +194,7 @@ void SimpleANN::train(const MatrixFloat &trainImages, const MatrixFloat &trainLa
             // One-hot encoded labels for the batch
             MatrixFloat batchLabels = trainLabelsOneHot.middleRows(startIdx, currentBatchSize);
 
-            /***** FORWARD PASS: Make predictions based on current weights and bias *****/
+            /***** FORWARD PASS: Make predictions based on current weights and biases *****/
             // 1. Input -> Hidden
             MatrixFloat hiddenPreActivation = (batchImages * weightsInputToHidden).rowwise() + biasHidden.transpose();
             MatrixFloat hiddenActivation = hiddenPreActivation.cwiseMax(0.0f);

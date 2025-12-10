@@ -107,7 +107,7 @@ int main() {
 
         /***** Hyperparameters *****/ 
         int numHiddenNeurons = 64; // Number of neurons in hidden layer
-        int numEpochs = 10; // # full passes through the training set
+        int numEpochs = 3; // # full passes through the training set
         int batchSize = 128; // Determines # samples to process before updating weights
         float learningRate = 0.1f; // When updating gradients, how "big" of a step to take
         /***************************/
@@ -116,7 +116,7 @@ int main() {
         string intensityLevels = " .:-=+*#%@";
         for (int row = 0; row < 28; row++) {
             for (int cols = 0; cols < 28; cols++) {
-                float pixelValue = trainImages(0, row * 28 + cols);
+                float pixelValue = trainImages(2, row * 28 + cols);
                 int levelIndex = static_cast<int>(pixelValue * (intensityLevels.size() - 1));
                 cout << intensityLevels[levelIndex];
             }
@@ -140,6 +140,11 @@ int main() {
         float testAccuracy = computeAccuracy(testPredictions, testLabels);
         
         cout << "Test Accuracy: " << (testAccuracy * 100) << "%\n";
+        
+        // Compute and display confusion matrix and performance metrics
+        Eigen::MatrixXi confusionMatrix = computeConfusionMatrix(testPredictions, testLabels, numClasses);
+        printConfusionMatrix(confusionMatrix);
+        printPerformanceMetrics(confusionMatrix);
 
     } catch (const exception& error) {
         cerr << "Error: " << error.what() << "\n";
