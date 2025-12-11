@@ -210,8 +210,14 @@ void SimpleANN::train(const MatrixFloat &trainImages, const MatrixFloat &trainLa
 
             /***** BACKWARD PASS: Compute gradients *****/
             // Output layer gradients (W2, b2)
+            
+            // Error is computed here vvvvvvvvvvvvvvv
             MatrixFloat gradientLogits = (predictions - batchLabels) / currentBatchSize;
+
+            // dW2 = A1^T * dZ2
             MatrixFloat gradientWeightsHiddenToOutput = hiddenActivation.transpose() * gradientLogits;
+            
+            // db2 = sum(dZ2, axis=0)
             Eigen::VectorXf gradientBiasOutput = gradientLogits.colwise().sum();
 
             // Next backprop error into hidden layer through W2, ReLU to get gradients for W1, b1
