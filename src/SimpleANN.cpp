@@ -71,6 +71,7 @@ void printConfusionMatrix(const Eigen::MatrixXi &confusionMatrix) {
     int numClasses = confusionMatrix.rows();
     
     cout << "\nConfusion Matrix:\n";
+    cout << "                      Predicted\n";
     cout << "     ";
     for (int i = 0; i < numClasses; i++) {
         cout << setw(5) << i;
@@ -79,6 +80,18 @@ void printConfusionMatrix(const Eigen::MatrixXi &confusionMatrix) {
     cout << "    " << string(numClasses * 5 + 1, '-') << "\n";
     
     for (int i = 0; i < numClasses; i++) {
+        if (i == numClasses / 2) cout << "T";
+        else cout << " ";
+
+        if (i == numClasses / 2) cout << "r";
+        else cout << " ";
+
+        if (i == numClasses / 2) cout << "u";
+        else cout << " ";
+
+        if (i == numClasses / 2) cout << "e";
+        else cout << " ";
+
         cout << setw(3) << i << " |";
         for (int j = 0; j < numClasses; j++) {
             cout << setw(5) << confusionMatrix(i, j);
