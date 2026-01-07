@@ -1,6 +1,8 @@
 # C++ MNIST Classifier
 
-- Build with `make` or `g++ -std=c++17 src/*.cpp -o ./build/model`
+### Required Libraries
+• Eigen (`brew install eigen')
 
-Hyperparameters can be adjusted in `src/main.cpp`.
+Build with `make` or `g++ -std=c++17 src/*.cpp -o ./build/model`
 
+• Hyperparameters can be adjusted in `src/main.cpp`.
