@@ -1,5 +1,11 @@
+CXX := g++
+CXXFLAGS := -std=c++17 -O3
+TARGET := build/model
+SOURCES := src/*.cpp
+
 make:
-	g++ -std=c++17 src/*.cpp -o build/model
+	mkdir -p build
+	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
 
 clean:
-	rm build/model
+	rm -f $(TARGET)
