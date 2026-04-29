@@ -112,18 +112,6 @@ int main() {
         float learningRate = 0.1f; // When updating gradients, how "big" of a step to take
         /***************************/
 
-        cout << "ASCII representation of data sample:\n";
-        string intensityLevels = " .:-=+*#%@";
-        for (int row = 0; row < 28; row++) {
-            for (int cols = 0; cols < 28; cols++) {
-                float pixelValue = trainImages(0, row * 28 + cols);
-                int levelIndex = static_cast<int>(pixelValue * (intensityLevels.size() - 1));
-                cout << intensityLevels[levelIndex];
-            }
-            cout << "\n";
-        }
-        cout << "\n";
-
         // Create and train ANN model
         SimpleANN model(numFeatures, numHiddenNeurons, numClasses);
 
