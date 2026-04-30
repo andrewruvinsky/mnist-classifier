@@ -44,6 +44,7 @@ MatrixFloat loadMnistImages(const string& filePath) {
     for (uint32_t i = 0; i < numImages; i++) {
         fileStream.read(reinterpret_cast<char*>(pixelBuffer.data()), pixelBuffer.size());
 
+        #pragma omp simd
         for (size_t pixelIndex = 0; pixelIndex < numPixels; pixelIndex++) {
             // Normalize to [0,1]
             images(i, pixelIndex) = pixelBuffer[pixelIndex] / 255.0f;
@@ -79,6 +80,7 @@ VectorInt loadMnistLabels(const string& filePath) {
 // Convert label vector to one-hot encoded matrix (numSamples x numClasses)
 MatrixFloat oneHotEncode(const VectorInt &labels, int numClasses) {
     MatrixFloat oneHot = MatrixFloat::Zero(labels.size(), numClasses);
+    #pragma omp parallel for
     for (int i = 0; i < labels.size(); i++) {
         oneHot(i, labels(i)) = 1.0f;
     }

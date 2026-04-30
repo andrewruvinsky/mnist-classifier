@@ -17,6 +17,7 @@ MatrixFloat softmax(const MatrixFloat &logits)
 {
     MatrixFloat probabilities(logits.rows(), logits.cols());
 
+    #pragma omp parallel for
     for (int i = 0; i < logits.rows(); i++)
     {
         // Subtract max for numerical stability
@@ -32,15 +33,14 @@ MatrixFloat softmax(const MatrixFloat &logits)
 float crossEntropyLoss(const MatrixFloat &predictions, const MatrixFloat &targets) {
     // Add small epsilon to avoid log(0)
     const float epsilon = 1e-10f;
-    MatrixFloat clippedPredictions = predictions.array().max(epsilon);
 
     // Cross-entropy: -sum(y_true * log(y_pred)) / numSamples
-    float loss = -(targets.array() * clippedPredictions.array().log()).sum() / predictions.rows();
-    return loss;
+    return -(targets.array() * predictions.array().max(epsilon).log()).sum() / predictions.rows();
 }
 
 float computeAccuracy(const MatrixFloat &predictions, const VectorInt &trueLabels) {
     int correct = 0;
+    #pragma omp parallel for reduction(+:correct)
     for (int i = 0; i < predictions.rows(); i++) {
         int predictedClass;
         predictions.row(i).maxCoeff(&predictedClass);
@@ -88,6 +88,11 @@ MatrixFloat SimpleANN::predict(const MatrixFloat &images)
 void SimpleANN::train(const MatrixFloat &trainImages, const MatrixFloat &trainLabelsOneHot, int numEpochs, float learningRate, int batchSize) {
     int numSamples = trainImages.rows();
     int numBatches = (numSamples + batchSize - 1) / batchSize;
+    VectorInt actualLabels(trainLabelsOneHot.rows());
+    #pragma omp parallel for
+    for (int i = 0; i < trainLabelsOneHot.rows(); i++) {
+        trainLabelsOneHot.row(i).maxCoeff(&actualLabels(i));
+    }
 
     auto trainingStartTime = chrono::high_resolution_clock::now();
     double totalEpochTime = 0.0;
@@ -159,13 +164,6 @@ void SimpleANN::train(const MatrixFloat &trainImages, const MatrixFloat &trainLa
         float avgLoss = totalLoss / numSamples;
 
         MatrixFloat trainPredictions = predict(trainImages);
-        
-        // Get actual labels from one-hot encoding for accuracy calculation
-        VectorInt actualLabels(trainLabelsOneHot.rows());
-        for (int i = 0; i < trainLabelsOneHot.rows(); i++) {
-            trainLabelsOneHot.row(i).maxCoeff(&actualLabels(i));
-        }
-        
         float trainAccuracy = computeAccuracy(trainPredictions, actualLabels);
 
         // TODO: Set aside 20% of training data for validation accuracy
